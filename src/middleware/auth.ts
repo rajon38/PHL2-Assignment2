@@ -1,18 +1,23 @@
 import { NextFunction, Request, Response } from "express";
-import jwt, { JwtPayload} from "jsonwebtoken";
+import jwt, { JwtPayload } from "jsonwebtoken";
 import config from "../config";
+
+type TokenPayload = JwtPayload & { id: number; role: string };
 
 const auth = (...roles: string[]) => {
     return async (req: Request, res: Response, next: NextFunction) => {
         try {
-            const token = req.headers.authorization;
-            if (!token) {
+            const authHeader = req.headers.authorization;
+            if (!authHeader) {
                 return res.status(500).json({ success: false, message: 'You are not allowed' });
             }
+            const token = authHeader.startsWith("Bearer ")
+        ? authHeader.split(" ")[1]
+        : authHeader;
             const decoded = jwt.verify(
-                token,
+                token as string,
                 config.jwtSecret as string
-            ) as JwtPayload;
+            ) as TokenPayload;
             req.user = decoded;
             if (roles.length && !roles.includes(decoded.role as string)) {
                 return res.status(500).json({ success: false, message: 'Unauthorized' });
